@@ -36,4 +36,4 @@ parts:
       - squashfs
       - ahci
     kernel-custom-modules:
-      - <path>/ops-snappy/parts/xpnet/install/xp80-Pcie-Endpoint.ko
+      - <path>/xpliant-driver-snappy/parts/xpnet/install/xp80-Pcie-Endpoint.ko
