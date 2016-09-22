@@ -1,0 +1,15 @@
+snapcraft.yaml
+*.snap
+*.snap.sideinfo
+*.bin
+parts/kernel
+stage
+snap
+work
+prime
+.pc/
+*~
+*-config
+*/*/*~
+parts/plugins/__pycache__
+snappy-systems
