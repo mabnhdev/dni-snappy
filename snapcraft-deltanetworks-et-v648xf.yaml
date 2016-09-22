@@ -1,0 +1,39 @@
+name: deltanetworks-et-v648xf-kernel
+version: 4.4.16-ops-1
+summary: Custom ubuntu-core kernel snap for the Delta Networks ET-V648XF.
+description: This kernel includes Xpliant drivers to support the OpenSwitch snap.
+confinement: strict
+grade: devel
+type: kernel
+parts:
+  kernel:
+    plugin: x-kernel
+    source: git://kernel.ubuntu.com/ubuntu/ubuntu-xenial.git
+    source-type: git
+    kernel-patches:
+      - patches/ismt.patch
+      - patches/igb_bcm54616s.patch
+      - patches/strnicmp.patch
+    kconfigfile: 4.4-config
+    kconfigs:
+      - CONFIG_DEBUG_INFO=n
+      - CONFIG_SQUASHFS=m
+      - CONFIG_SQUASHFS_XZ=y
+      - CONFIG_E1000=y
+      - CONFIG_E1000E=y
+      - CONFIG_BROADCOM_PHY=y
+      - CONFIG_BCM87XX_PHY=y
+      - CONFIG_I2C_ALGOBIT=n
+      - CONFIG_I2C_ALGOPCF=n
+      - CONFIG_I2C_ALGOPCA=n
+      - CONFIG_I2C_HELPER_AUTO=n
+      - CONFIG_I2C_SMBUS=y
+      - CONFIG_I2C_I801=y
+      - CONFIG_I2C_ISMT=y
+      - CONFIG_IGB=y
+      - CONFIG_IGBVF=y
+    kernel-initrd-modules:
+      - squashfs
+      - ahci
+    kernel-custom-modules:
+      - <path>/ops-snappy/parts/xpnet/install/xp80-Pcie-Endpoint.ko

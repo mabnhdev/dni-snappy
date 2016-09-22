@@ -1,0 +1,122 @@
+#!/usr/bin/env bash
+set +x
+set -e
+
+snap=$1
+if [ -z "$snap" ] ; then
+    echo "Kernel snap must be specified."
+    exit 1
+fi
+if [ ! -e "$snap" ] ; then
+    echo "Snap does not exist; run 'snapcraft' first."
+    exit 1
+fi
+
+WORK=./work
+IMG_WORK=./img_work
+GADGETS=./snappy-systems
+INSTALLERD=installer
+INSTALLER=$WORK/$INSTALLERD
+TOOLS=./tools
+INSTALLER_SCRIPTS=$TOOLS/installer_scripts
+IMG=$WORK/snappy.img
+ASSETS=$TOOLS/image_assets
+ASSERTIONS=$ASSETS/assertions
+
+PLATFORM=${snap%-kernel*}
+CONFIG=$TOOLS/configs/$PLATFORM.config
+ONIE=snappy-onie-installer-x86_64-$PLATFORM.bin
+
+if [ ! -e "$CONFIG" ] ; then
+    echo "Config file does not exist - $CONFIG"
+    exit 1
+fi
+
+function cleanup {
+    rm -rf $WORK
+    rm -rf $IMG_WORK
+    rm -f *.snap.sideinfo
+}
+
+cleanup
+
+mkdir -p $WORK
+mkdir -p $IMG_WORK
+mkdir -p $INSTALLER
+echo
+echo "Creating Ubuntu image file - $IMG"
+echo
+if [ -z "$USE_UBUNTU_IMAGE" ] ; then
+    /snap/ubuntu-device-flash/current/bin/ubuntu-device-flash core 16 --channel=stable --kernel=$snap --gadget=pc --os=ubuntu-core -o $IMG
+else
+    echo
+    echo "PLEASE NOTE WELL!!!!!!"
+    echo "This command CANNOT be run on Extreme build servers."
+    echo "There is a general snapd bug that generates an exception if you"
+    echo "try to run a snap command from a shell whose home dir is NFS mounted"
+    echo "as we have on our build servers."
+    echo "You'll need to run it on some type of VM running Ubuntu Xenial."
+    echo
+    export UBUNTU_IMAGE_SKIP_COPY_UNVERIFIED_MODEL=1
+    # ubuntu-image -w $IMG_WORK $ASSERTIONS/$PLATFORM.assertion --extra-snaps $snap -o $IMG
+
+    # The following is a workaround to use the 'default' channel to build the image
+    if [ -e $GADGETS ] ; then
+        bzr update $GADGETS
+    else
+        bzr branch lp:~vorlon/snappy-hub/snappy-systems
+    fi
+    ubuntu-image -w $IMG_WORK $ASSERTIONS/$PLATFORM.assertion --extra-snaps $snap -o $IMG -u load_gadget_yaml
+    rm -rf $IMG_WORK/unpack/gadget
+    cp -a $GADGETS/generic-amd64 $IMG_WORK/unpack/gadget
+    ubuntu-image -w $IMG_WORK --resume
+fi
+
+#
+# Build an ONIE NOS Installer from the image
+#
+
+MNT=/tmp/oniemnt
+LABELS=(system-boot writable)
+FSTYPES=(ext2 ext4)
+SIZES=($(sudo kpartx -l $IMG | head -n -1 | tail -n +2 | tr ' ' : | cut -d: -f 5))
+LOOPS=($(sudo kpartx -l $IMG | head -n -1 | tail -n +2 | tr ' ' : | cut -d: -f 1))
+
+echo
+echo "Creating ONIE Installer file - $ONIE"
+echo
+
+PARTS=$INSTALLER/partitions
+echo -n > $PARTS
+echo "128M:ext3:OpenSwitch\040Conf" >> $PARTS
+echo "1024M:ext3:OpenSwitch\040Diags" >> $PARTS
+if [ ! -d $MNT ] ; then
+    mkdir $MNT
+fi
+sudo kpartx -a $IMG
+while [ ! -e /dev/mapper/${LOOPS[0]} ] ; do
+      sleep 1
+done
+for i in $(seq 0 1)
+do
+  echo ${SIZES[i]}:${FSTYPES[i]}:${LABELS[i]} >> $PARTS
+  sudo mount -o ro /dev/mapper/${LOOPS[i]} $MNT
+  echo Extracting partition contents to $INSTALLER/${LABELS[i]}.tgz
+  sudo tar zcpS -C $MNT -f $INSTALLER/${LABELS[i]}.tgz .
+  sudo umount $MNT
+done
+
+sed -i s/ext2/ext3/g $PARTS
+
+sudo kpartx -d $IMG
+
+TARBALL=snappy-onie-installer.bin.2.tar
+cp $CONFIG $INSTALLER/installer.conf
+cp $INSTALLER_SCRIPTS/* $INSTALLER
+. $CONFIG
+pushd $WORK
+tar cf $TARBALL $INSTALLERD
+popd
+cat $TOOLS/snappy-onie-installer.bin.1.sh $WORK/$TARBALL > $ONIE
+
+cleanup

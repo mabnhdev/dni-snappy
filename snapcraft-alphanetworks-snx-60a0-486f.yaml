@@ -1,0 +1,34 @@
+name: alphanetworks-snx-60a0-486f-kernel
+version: 4.4.16-ops-1
+summary: Custom ubuntu-core kernel snap for the Alphanetworks SNX-60A0-486F.
+description: This kernel includes Broadcom CDP drivers to support OpenSwitch snap.
+confinement: strict
+grade: devel
+type: kernel
+parts:
+  kernel:
+    plugin: x-kernel
+    source: git://kernel.ubuntu.com/ubuntu/ubuntu-xenial.git
+    source-type: git
+    kernel-patches:
+      - patches/ismt.patch
+    kconfigfile: 4.4-config
+    kconfigs:
+      - CONFIG_DEBUG_INFO=n
+      - CONFIG_SQUASHFS=m
+      - CONFIG_SQUASHFS_XZ=y
+      - CONFIG_E1000=y
+      - CONFIG_E1000E=y
+      - CONFIG_I2C_SMBUS=y
+      - CONFIG_I2C_I801=y
+      - CONFIG_I2C_ISMT=y
+      - CONFIG_IGB=y
+      - CONFIG_IGBVF=y
+    kernel-initrd-modules:
+      - squashfs
+      - ahci
+    kernel-custom-modules:
+      - <path>/ops-snappy/parts/openswitch/install/lib/modules/3.18.32-amd64/extra/opennsl/linux-bcm-knet.ko
+      - <path>/ops-snappy/parts/openswitch/install/lib/modules/3.18.32-amd64/extra/opennsl/linux-kernel-bde.ko
+      - <path>/ops-snappy/parts/openswitch/install/lib/modules/3.18.32-amd64/extra/opennsl/linux-user-bde.ko
+    
