@@ -46,31 +46,19 @@ mkdir -p $INSTALLER
 echo
 echo "Creating Ubuntu image file - $IMG"
 echo
-if [ -z "$USE_UBUNTU_IMAGE" ] ; then
-    /snap/ubuntu-device-flash/current/bin/ubuntu-device-flash core 16 --channel=stable --kernel=$snap --gadget=pc --os=ubuntu-core -o $IMG
-else
-    echo
-    echo "PLEASE NOTE WELL!!!!!!"
-    echo "This command CANNOT be run on Extreme build servers."
-    echo "There is a general snapd bug that generates an exception if you"
-    echo "try to run a snap command from a shell whose home dir is NFS mounted"
-    echo "as we have on our build servers."
-    echo "You'll need to run it on some type of VM running Ubuntu Xenial."
-    echo
-    export UBUNTU_IMAGE_SKIP_COPY_UNVERIFIED_MODEL=1
-    # ubuntu-image -w $IMG_WORK $ASSERTIONS/$PLATFORM.assertion --extra-snaps $snap -o $IMG
+export UBUNTU_IMAGE_SKIP_COPY_UNVERIFIED_MODEL=1
+# ubuntu-image -w $IMG_WORK $ASSERTIONS/$PLATFORM.assertion --extra-snaps $snap -o $IMG
 
-    # The following is a workaround to use the 'default' channel to build the image
-    if [ -e $GADGETS ] ; then
-        bzr update $GADGETS
-    else
-        bzr branch lp:~vorlon/snappy-hub/snappy-systems
-    fi
-    ubuntu-image -w $IMG_WORK $ASSERTIONS/$PLATFORM.assertion --extra-snaps $snap -o $IMG -u load_gadget_yaml
-    rm -rf $IMG_WORK/unpack/gadget
-    cp -a $GADGETS/generic-amd64 $IMG_WORK/unpack/gadget
-    ubuntu-image -w $IMG_WORK --resume
+# The following is a workaround to use the 'default' channel to build the image
+if [ -e $GADGETS ] ; then
+    bzr update $GADGETS
+else
+    bzr branch lp:~vorlon/snappy-hub/snappy-systems
 fi
+ubuntu-image -w $IMG_WORK $ASSERTIONS/$PLATFORM.assertion --extra-snaps $snap -o $IMG -u load_gadget_yaml
+rm -rf $IMG_WORK/unpack/gadget
+cp -a $GADGETS/generic-amd64 $IMG_WORK/unpack/gadget
+ubuntu-image -w $IMG_WORK --resume
 
 #
 # Build an ONIE NOS Installer from the image
