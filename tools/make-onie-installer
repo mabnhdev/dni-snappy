@@ -85,6 +85,7 @@ sudo kpartx -a $IMG
 while [ ! -e /dev/mapper/${LOOPS[0]} ] ; do
       sleep 1
 done
+sleep 5
 for i in $(seq 0 1)
 do
   echo ${SIZES[i]}:${FSTYPES[i]}:${LABELS[i]} >> $PARTS
